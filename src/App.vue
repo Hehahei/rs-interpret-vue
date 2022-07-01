@@ -20,6 +20,8 @@ import {
   Plus,
 } from "@element-plus/icons-vue";
 
+import { initMap, mapFunction } from "./assets/map";
+
 export default {
   components: {
     Swiper,
@@ -60,6 +62,8 @@ export default {
 
     let resultImageUrl = ref("");
 
+    let mainMap = null;
+
     // 生成图片链接
     const toImage = (name, data) => {
       let ext = name.split(".")[1];
@@ -81,7 +85,7 @@ export default {
     };
 
     const handleOpen = (key, keyPath) => {
-      firstSlideSwiperRef.slideTo(key - 1, 50);
+      firstSlideSwiperRef.slideTo(key - 1, 500);
       firstSlideSwiperIndex = key - 1;
     };
 
@@ -284,6 +288,16 @@ export default {
       activeStep.value = 0;
     };
 
+    const loadMap = () => {
+      if(mainMap != null){
+        return;
+      }
+      setTimeout(function(){
+        mainMap = initMap();
+        window.mainMap = mainMap;
+      },500)
+    };
+
     return {
       modules: [Mousewheel, Pagination],
       handleOpen,
@@ -306,6 +320,8 @@ export default {
       resultImageUrl,
       backToFirst,
       downloadResult,
+      // mainMap,
+      loadMap,
     };
   },
 };
@@ -324,6 +340,7 @@ export default {
     :modules="modules"
     :allowTouchMove="false"
     class="mySwiper"
+    @reachEnd="loadMap"
   >
     <swiper-slide class="first-swiper">
       <div class="swiper-first-menu">
@@ -854,7 +871,9 @@ export default {
     </swiper-slide>
 
     <!-- 地图截图swiper -->
-    <swiper-slide class="third-swiper"> </swiper-slide>
+    <swiper-slide class="third-swiper">
+      <div id="mapDiv" style="position:absolute;width:500px; height:400px"></div>
+    </swiper-slide>
   </swiper>
 </template>
 
@@ -1106,5 +1125,10 @@ body {
 .cd .el-result {
   max-width: 100%;
   max-height: 83%;
+}
+
+/* 天地图右下角版权 */
+#mapDiv .tdt-control-copyright.tdt-control>div {
+  display: none;
 }
 </style>
