@@ -18,9 +18,22 @@ import {
   Document,
   Setting,
   Plus,
+  ArrowUp,
+  DArrowLeft,
+  ElemeFilled,
+  Lollipop,
 } from "@element-plus/icons-vue";
 
-import { initMap, mapFunction } from "./assets/map";
+// import { initMap, mapFunction } from "./assets/map";
+
+import { Map, View } from "ol";
+import "ol/ol.css";
+import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
+import { OverviewMap } from "ol/control";
+import { XYZ, Vector as VectorSource } from "ol/source";
+import Draw, { createBox } from "ol/interaction/Draw";
+import { getTopLeft, getWidth, getHeight } from "ol/extent";
+import { Circle, Fill, Stroke, Style } from "ol/style";
 
 export default {
   components: {
@@ -31,9 +44,14 @@ export default {
     Document,
     Setting,
     Plus,
+    ArrowUp,
+    DArrowLeft,
+    ElemeFilled,
+    Lollipop,
   },
   setup() {
     const baseUrl = "http://106.13.199.229:8887";
+    let mainSlideSwiperRef = null;
     let firstSlideSwiperRef = null;
     let secondSlideSwiperRef = null;
     let thirdSlideSwiperRef = null;
@@ -62,7 +80,46 @@ export default {
 
     let resultImageUrl = ref("");
 
-    let mainMap = null;
+    let mainMap = ref(null);
+
+    let hMap;
+
+    let activeTool = ref(0);
+
+    const vectorSource = new VectorSource();
+
+    // 绘制图框存放于该图层
+    const vectorLayer = new VectorLayer({
+      className: "draw-layer",
+      source: vectorSource,
+      style: new Style({
+        fill: new Fill({
+          color: "#ffffff00",
+        }),
+        stroke: new Stroke({
+          color: "#0099ff",
+          width: 3,
+        }),
+      }),
+    });
+    // window.vectorLayer = vectorLayer;
+
+    let mapContext;
+
+    const getContext = (event) => {
+      mapContext = event.context;
+    };
+
+    const tDTLayer = new TileLayer({
+      name: "天地图影像",
+      source: new XYZ({
+        url: "http://t0.tianditu.com/DataServer?T=img_w&tk=f15764f2eacdcbfa69d2435342416ea8&x={x}&y={y}&l={z}",
+        crossOrigin: "Anonymous",
+      }),
+    });
+    tDTLayer.on("postrender", getContext);
+
+    let mapDrawer;
 
     // 生成图片链接
     const toImage = (name, data) => {
@@ -74,6 +131,10 @@ export default {
         s = s + ext + ";base64," + data;
       }
       return s;
+    };
+
+    const setMainSlideSwiperRef = (swiper) => {
+      mainSlideSwiperRef = swiper;
     };
 
     const setFirstSlideSwiperRef = (swiper) => {
@@ -136,31 +197,31 @@ export default {
       let url = "";
       let param = Object.create(null);
       let successHandle = null;
-      let ErrorHandle = null;
+      let errorHandle = null;
       switch (type) {
         case "oe":
           url = baseUrl + "/extraction/predict";
           param.fileName = imgName.value;
           successHandle = oESuccessHandle;
-          ErrorHandle = oEErrorHandle;
+          errorHandle = oEErrorHandle;
           break;
         case "cd":
           url = baseUrl + "/change/predict";
           param.formerFileName = imgName.value;
           param.latterFileName = imgName2.value;
           successHandle = cDSuccessHandle;
-          ErrorHandle = cDErrorHandle;
+          errorHandle = cDErrorHandle;
           break;
         case "od":
           url = baseUrl + "/detection/predict";
           param.fileName = imgName.value;
           successHandle = oDSuccessHandle;
-          ErrorHandle = oDErrorHandle;
+          errorHandle = oDErrorHandle;
         case "tc":
           url = baseUrl + "/classify/predict";
           param.fileName = imgName.value;
           successHandle = tCSuccessHandle;
-          ErrorHandle = tCErrorHandle;
+          errorHandle = tCErrorHandle;
         default:
           break;
       }
@@ -176,7 +237,7 @@ export default {
         data: JSON.stringify(param),
       })
         .then(successHandle)
-        .catch(ErrorHandle);
+        .catch(errorHandle);
     };
 
     // 目标提取处理
@@ -288,19 +349,215 @@ export default {
       activeStep.value = 0;
     };
 
+    const initMap = () => {
+      let overviewMapControl = new OverviewMap({
+        collapsible: false,
+        collapsed: false,
+        layers: [
+          new TileLayer({
+            name: "天地图影像-鹰眼",
+            source: new XYZ({
+              url: "http://t0.tianditu.com/DataServer?T=img_w&tk=f15764f2eacdcbfa69d2435342416ea8&x={x}&y={y}&l={z}",
+            }),
+          }),
+        ],
+        // view: new View({
+        //   projection: "EPSG:4326",
+        //   maxZoom: 18,
+        //   minZoom: 1,
+        //   zoom: 1,
+        // })
+      });
+      hMap = new Map({
+        target: "mapDiv",
+        layers: [tDTLayer, vectorLayer],
+        // layers: [tDTLayer],
+        view: new View({
+          // 地图视图
+          projection: "EPSG:4326", // 坐标系，有EPSG:4326和EPSG:3857
+          center: [114.064839, 22.548857], // 深圳坐标
+          maxZoom: 18,
+          minZoom: 15, // 地图缩放最小级别
+          zoom: 15, // 地图缩放级别（打开页面时默认级别）
+        }),
+        controls: [overviewMapControl],
+      });
+      mainMap.value = hMap;
+    };
+
     const loadMap = () => {
-      if(mainMap != null){
+      mainSlideSwiperRef.mousewheel.disable();
+      if (hMap != null) {
         return;
       }
-      setTimeout(function(){
-        mainMap = initMap();
-        window.mainMap = mainMap;
-      },500)
+      setTimeout(function () {
+        initMap();
+      }, 500);
+    };
+
+    const backToSecond = () => {
+      mainSlideSwiperRef.mousewheel.enable();
+      mainSlideSwiperRef.slideTo(1, 500);
+    };
+
+    let mapAction = "";
+    let mapSuccessHandle;
+
+    const drawendHandle = (e) => {
+      // debugger;
+      hMap.removeInteraction(mapDrawer);
+      let geom = e.feature.getGeometry();
+      setTimeout(function () {
+        clipImage(geom);
+      }, 50);
+      // clipImage(geom);
+    };
+
+    const mapPredict = (type) => {
+      switch (type) {
+        case "oe":
+          activeTool.value = 1;
+          mapAction = "oe";
+          break;
+        case "od":
+          activeTool.value = 3;
+          mapAction = "od";
+          break;
+        case "tc":
+          activeTool.value = 4;
+          mapAction = "tc";
+          break;
+
+        default:
+          activeTool.value = 0;
+          mapAction = "";
+          break;
+      }
+      hMap.removeInteraction(mapDrawer);
+      vectorSource.clear();
+      mapDrawer = new Draw({
+        source: vectorSource,
+        type: "Circle",
+        geometryFunction: createBox(),
+      });
+      mapDrawer.on("drawend", drawendHandle);
+      hMap.addInteraction(mapDrawer);
+    };
+
+    const clipImage = (geom) => {
+      let extent = geom.getExtent();
+      let [x, y] = hMap.getPixelFromCoordinate(getTopLeft(extent));
+      let currentPixelZoom = hMap.getView().getZoom();
+      let resolution = hMap.getView().getResolutionForZoom(currentPixelZoom);
+      let w = getWidth(extent) / resolution;
+      let h = getHeight(extent) / resolution;
+      vectorLayer.setVisible(false);
+      let imageData = mapContext.getImageData(x, y, w, h);
+      vectorLayer.setVisible(true);
+      // let newCanvas = document.createElement("canvas");
+      let newCanvas = document.getElementById("ttttttt");
+      newCanvas.width = w;
+      newCanvas.height = h;
+      let newCtx = newCanvas.getContext("2d");
+      newCtx.putImageData(imageData, 0, 0);
+      // let image = new Image();
+      // image.src = newCanvas.toDataURL("image/png");
+      // console.log(newCanvas.toDataURL());
+      // debugger;
+      // axios({
+      //   headers: { "Content-Type": "application/json" },
+      //   url: baseUrl + "/classify/predict",
+      //   method: "post",
+      //   data: JSON.stringify({ data: newCanvas.toDataURL("image/png") }),
+      // }).then(function (res) {});
+      let requestUrl = "";
+      let successHandle;
+      let errorHandle;
+      switch (mapAction) {
+        case "oe":
+          requestUrl = baseUrl + "/extraction/predict";
+          successHandle = oEMapSuccessHandle;
+          errorHandle = oEMapErrorHandle;
+          break;
+        case "od":
+          requestUrl = baseUrl + "/detection/predict";
+          successHandle = oDMapSuccessHandle;
+          errorHandle = oDMapErrorHandle;
+          break;
+        case "tc":
+          requestUrl = baseUrl + "/classify/predict";
+          successHandle = tCMapSuccessHandle;
+          errorHandle = tCMapErrorHandle;
+          break;
+
+        default:
+          activeTool.value = 0;
+          break;
+      }
+
+      let resultFileName2 = "";
+
+      axios({
+        headers: { "Content-Type": "application/json" },
+        url: requestUrl,
+        method: "post",
+        data: JSON.stringify({ imageData: newCanvas.toDataURL("image/jpeg") }),
+      })
+        .then(successHandle)
+        .catch(errorHandle);
+    };
+
+    // 目标提取处理
+    const oEMapSuccessHandle = (res) => {
+      if (res.data.success) {
+        ElMessage.success("目标提取预测成功！");
+        resultFileName2 = res.data.result.fileName;
+        // resultImageUrl.value = toImage(resultFileName, res.data.result.data);
+        // predictStatus.value = "success";
+      } else {
+        resultFileName2 = "";
+        ElMessage.error(res.data.result.msg);
+      }
+    };
+
+    const oEMapErrorHandle = (err) => {
+      ElMessage.error("网络错误！");
+    };
+
+    // 目标检测处理
+    const oDMapSuccessHandle = (res) => {
+      if (res.data.success) {
+        ElMessage.success("目标检测预测成功！");
+        resultFileName2 = res.data.result.fileName;
+      } else {
+        resultFileName2 = "";
+        ElMessage.error(res.data.result.msg);
+      }
+    };
+
+    const oDMapErrorHandle = (err) => {
+      ElMessage.error("网络错误！");
+    };
+
+    // 地物分类处理
+    const tCMapSuccessHandle = (res) => {
+      if (res.data.success) {
+        ElMessage.success("目标检测预测成功！");
+        resultFileName2 = res.data.result.fileName;
+      } else {
+        resultFileName2 = "";
+        ElMessage.error(res.data.result.msg);
+      }
+    };
+
+    const tCMapErrorHandle = (err) => {
+      ElMessage.error("网络错误！");
     };
 
     return {
       modules: [Mousewheel, Pagination],
       handleOpen,
+      setMainSlideSwiperRef,
       setFirstSlideSwiperRef,
       setSecondSlideSwiperRef,
       handleSelect,
@@ -320,8 +577,11 @@ export default {
       resultImageUrl,
       backToFirst,
       downloadResult,
-      // mainMap,
+      mainMap,
       loadMap,
+      backToSecond,
+      activeTool,
+      mapPredict,
     };
   },
 };
@@ -340,6 +600,7 @@ export default {
     :modules="modules"
     :allowTouchMove="false"
     class="mySwiper"
+    @swiper="setMainSlideSwiperRef"
     @reachEnd="loadMap"
   >
     <swiper-slide class="first-swiper">
@@ -872,7 +1133,43 @@ export default {
 
     <!-- 地图截图swiper -->
     <swiper-slide class="third-swiper">
-      <div id="mapDiv" style="position:absolute;width:500px; height:400px"></div>
+      <div class="map-content">
+        <el-icon color="#dce5eebd" :size="60" @click="backToSecond"
+          ><DArrowLeft
+        /></el-icon>
+        <div class="toolbox" v-if="mainMap">
+          <el-icon
+            color="#292a2bbd"
+            :size="40"
+            :class="{ active: activeTool == 1 }"
+            @click="mapPredict('oe')"
+            ><ElemeFilled
+          /></el-icon>
+          <el-icon color="#b0b2b4ad" :size="40" class="map-cd"
+            ><ElemeFilled
+          /></el-icon>
+          <el-icon
+            color="#292a2bbd"
+            :size="40"
+            :class="{ active: activeTool == 3 }"
+            @click="mapPredict('od')"
+            ><ElemeFilled
+          /></el-icon>
+          <el-icon
+            color="#292a2bbd"
+            :size="40"
+            :class="{ active: activeTool == 4 }"
+            @click="mapPredict('tc')"
+            ><ElemeFilled
+          /></el-icon>
+          <el-icon color="#292a2bbd" :size="40" @click="mapPredict()"
+            ><Lollipop
+          /></el-icon>
+        </div>
+        <!-- <div id="testDiv" @click="Test"></div> -->
+        <div id="mapDiv"></div>
+        <canvas id="ttttttt"></canvas>
+      </div>
     </swiper-slide>
   </swiper>
 </template>
@@ -1127,8 +1424,98 @@ body {
   max-height: 83%;
 }
 
+.map-content {
+  width: 100%;
+  height: 100%;
+}
+
+.map-content > .el-icon {
+  position: absolute;
+  top: 1%;
+  right: 50%;
+  transform: rotate(90deg);
+  z-index: 99;
+}
+
+.map-content > .el-icon:hover {
+  /* color: #409efc; */
+  transform: translate(0, -5%) scale(1.2) rotate(90deg);
+  transition: 0.2s;
+}
+
+.map-content .el-icon:hover {
+  color: #409efc;
+}
+
+#mapDiv {
+  width: 100%;
+  height: 100%;
+}
+
 /* 天地图右下角版权 */
-#mapDiv .tdt-control-copyright.tdt-control>div {
+#mapDiv .tdt-control-copyright.tdt-control > div {
   display: none;
+}
+
+.ol-overviewmap {
+  left: unset !important;
+  right: 0;
+  height: 26%;
+  width: 17%;
+}
+
+.ol-overviewmap-map {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.map-content .toolbox {
+  display: flex;
+  height: 250px;
+  width: 50px;
+  position: absolute;
+  top: 5%;
+  left: 5%;
+  background-color: #ffffffcc;
+  /* transform: rotate(90deg); */
+  z-index: 99;
+  border-radius: 15px;
+  border: 2px solid #787777;
+  flex-direction: column;
+  align-items: center;
+}
+
+.toolbox .map-cd.el-icon {
+  cursor: not-allowed;
+}
+
+.toolbox .map-cd.el-icon:hover {
+  color: #b0b2b4ad;
+  cursor: not-allowed;
+}
+
+.toolbox > .el-icon {
+  margin: 5px;
+}
+
+.toolbox > .el-icon.active {
+  color: #409efc;
+}
+
+.map-content > #testDiv {
+  height: 65%;
+  width: 50%;
+  position: absolute;
+  z-index: 999;
+  top: 20%;
+  left: 20%;
+  border: 2px solid #409efc;
+}
+
+#ttttttt {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 3px solid #0b4be0;
 }
 </style>
