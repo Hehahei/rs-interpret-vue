@@ -22,15 +22,18 @@ import {
   DArrowLeft,
   ElemeFilled,
   Lollipop,
+  Tools,
 } from "@element-plus/icons-vue";
-
-// import { initMap, mapFunction } from "./assets/map";
 
 import { Map, View } from "ol";
 import "ol/ol.css";
-import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
+import {
+  Tile as TileLayer,
+  Vector as VectorLayer,
+  Image as ImageLayer,
+} from "ol/layer";
 import { OverviewMap } from "ol/control";
-import { XYZ, Vector as VectorSource } from "ol/source";
+import { XYZ, Vector as VectorSource, ImageStatic } from "ol/source";
 import Draw, { createBox } from "ol/interaction/Draw";
 import { getTopLeft, getWidth, getHeight } from "ol/extent";
 import { Circle, Fill, Stroke, Style } from "ol/style";
@@ -48,6 +51,7 @@ export default {
     DArrowLeft,
     ElemeFilled,
     Lollipop,
+    Tools,
   },
   setup() {
     const baseUrl = "http://106.13.199.229:8887";
@@ -81,6 +85,12 @@ export default {
     let resultImageUrl = ref("");
 
     let mainMap = ref(null);
+
+    let finishMapPredict = ref(false);
+
+    let imageLayerVisible = ref(true);
+
+    let imageLayerOpacity = ref(100);
 
     let hMap;
 
@@ -401,7 +411,6 @@ export default {
     };
 
     let mapAction = "";
-    let mapSuccessHandle;
 
     const drawendHandle = (e) => {
       // debugger;
@@ -414,6 +423,7 @@ export default {
     };
 
     const mapPredict = (type) => {
+      claerMapData();
       switch (type) {
         case "oe":
           activeTool.value = 1;
@@ -431,10 +441,10 @@ export default {
         default:
           activeTool.value = 0;
           mapAction = "";
-          break;
+          return;
       }
-      hMap.removeInteraction(mapDrawer);
-      vectorSource.clear();
+      // hMap.removeInteraction(mapDrawer);
+      // vectorSource.clear();
       mapDrawer = new Draw({
         source: vectorSource,
         type: "Circle",
@@ -444,7 +454,10 @@ export default {
       hMap.addInteraction(mapDrawer);
     };
 
+    let geometry;
+
     const clipImage = (geom) => {
+      geometry = geom;
       let extent = geom.getExtent();
       let [x, y] = hMap.getPixelFromCoordinate(getTopLeft(extent));
       let currentPixelZoom = hMap.getView().getZoom();
@@ -454,40 +467,23 @@ export default {
       vectorLayer.setVisible(false);
       let imageData = mapContext.getImageData(x, y, w, h);
       vectorLayer.setVisible(true);
-      // let newCanvas = document.createElement("canvas");
-      let newCanvas = document.getElementById("ttttttt");
+      let newCanvas = document.createElement("canvas");
+      // let newCanvas = document.getElementById("ttttttt");
       newCanvas.width = w;
       newCanvas.height = h;
       let newCtx = newCanvas.getContext("2d");
       newCtx.putImageData(imageData, 0, 0);
-      // let image = new Image();
-      // image.src = newCanvas.toDataURL("image/png");
-      // console.log(newCanvas.toDataURL());
-      // debugger;
-      // axios({
-      //   headers: { "Content-Type": "application/json" },
-      //   url: baseUrl + "/classify/predict",
-      //   method: "post",
-      //   data: JSON.stringify({ data: newCanvas.toDataURL("image/png") }),
-      // }).then(function (res) {});
+
       let requestUrl = "";
-      let successHandle;
-      let errorHandle;
       switch (mapAction) {
         case "oe":
           requestUrl = baseUrl + "/extraction/predict";
-          successHandle = oEMapSuccessHandle;
-          errorHandle = oEMapErrorHandle;
           break;
         case "od":
           requestUrl = baseUrl + "/detection/predict";
-          successHandle = oDMapSuccessHandle;
-          errorHandle = oDMapErrorHandle;
           break;
         case "tc":
           requestUrl = baseUrl + "/classify/predict";
-          successHandle = tCMapSuccessHandle;
-          errorHandle = tCMapErrorHandle;
           break;
 
         default:
@@ -495,64 +491,162 @@ export default {
           break;
       }
 
-      let resultFileName2 = "";
-
       axios({
         headers: { "Content-Type": "application/json" },
         url: requestUrl,
         method: "post",
         data: JSON.stringify({ imageData: newCanvas.toDataURL("image/jpeg") }),
       })
-        .then(successHandle)
-        .catch(errorHandle);
+        .then(mapSuccessHandle)
+        .catch(mapErrorHandle);
     };
 
-    // 目标提取处理
-    const oEMapSuccessHandle = (res) => {
-      if (res.data.success) {
-        ElMessage.success("目标提取预测成功！");
-        resultFileName2 = res.data.result.fileName;
-        // resultImageUrl.value = toImage(resultFileName, res.data.result.data);
-        // predictStatus.value = "success";
-      } else {
-        resultFileName2 = "";
+    let imageLayer = null;
+
+    const mapSuccessHandle = (res) => {
+      if (!res.data.success) {
         ElMessage.error(res.data.result.msg);
+        return;
       }
+      let msg = "";
+      switch (mapAction) {
+        case "oe":
+          msg = "目标提取预测成功！";
+          break;
+        case "od":
+          msg = "目标检测预测成功！";
+          break;
+        case "tc":
+          msg = "地物分类预测成功！";
+          break;
+
+        default:
+          msg = "";
+          break;
+      }
+      ElMessage.success(msg);
+      let mapResultFileName = res.data.result.fileName;
+      let type = "";
+      let ext = mapResultFileName.split(".")[1];
+      if (ext == "jpg") {
+        type = "image/jpeg";
+      } else {
+        type = "image/" + ext;
+      }
+
+      // 转为ascii码
+      let resultImageString = atob(res.data.result.data);
+
+      // 处理异常,将ascii码小于0的转换为大于0
+      let len = resultImageString.length;
+      let newArr = new Uint8Array(len);
+      while (len--) {
+        newArr[len] = resultImageString.charCodeAt(len);
+      }
+
+      let imageBlob = new Blob([newArr], { type: type });
+      let resultImageUrl = URL.createObjectURL(imageBlob);
+      let imageStatic = new ImageStatic({
+        url: resultImageUrl,
+        imageExtent: geometry.getExtent(),
+      });
+      imageLayer = new ImageLayer({ source: imageStatic });
+      hMap.addLayer(imageLayer);
+      finishMapPredict.value = true;
+
+      // let imgdiv = document.getElementById("ttttttt");
+      // imgdiv.src = resultImageUrl;
+      // debugger;
+      // console.log(resultImageUrl);
+      // debugger;
     };
 
-    const oEMapErrorHandle = (err) => {
+    const mapErrorHandle = (err) => {
       ElMessage.error("网络错误！");
     };
 
-    // 目标检测处理
-    const oDMapSuccessHandle = (res) => {
-      if (res.data.success) {
-        ElMessage.success("目标检测预测成功！");
-        resultFileName2 = res.data.result.fileName;
-      } else {
-        resultFileName2 = "";
-        ElMessage.error(res.data.result.msg);
+    const changeOpacity = () => {
+      activeTool.value = 5;
+    };
+
+    // 修改图片是否可见
+    const changeImageLayerVisible = (val) => {
+      imageLayer.setVisible(val);
+    }
+
+    const formatTooltip = (val) => {
+      return val / 100
+    }
+
+    // 修改图片透明度
+    const changeImageLayerOpacity = (val) => {
+      imageLayer.setOpacity(val / 100);
+    }
+
+    const claerMapData = () => {
+      if (imageLayer != null){
+        hMap.removeLayer(imageLayer);
       }
-    };
-
-    const oDMapErrorHandle = (err) => {
-      ElMessage.error("网络错误！");
-    };
-
-    // 地物分类处理
-    const tCMapSuccessHandle = (res) => {
-      if (res.data.success) {
-        ElMessage.success("目标检测预测成功！");
-        resultFileName2 = res.data.result.fileName;
-      } else {
-        resultFileName2 = "";
-        ElMessage.error(res.data.result.msg);
+      imageLayer = null;
+      if (mapDrawer != null) {
+        hMap.removeInteraction(mapDrawer);
       }
-    };
+      mapDrawer = null;
+      geometry = null;
+      mapAction = '';
+      vectorSource.clear();
+      imageLayerVisible.value = true;
+      imageLayerOpacity.value = 100;
+      activeTool.value = 0;
+      finishMapPredict.value = false;
+    }
 
-    const tCMapErrorHandle = (err) => {
-      ElMessage.error("网络错误！");
-    };
+    // // 目标提取处理
+    // const oEMapSuccessHandle = (res) => {
+    //   if (res.data.success) {
+    //     ElMessage.success("目标提取预测成功！");
+    //     resultFileName2 = res.data.result.fileName;
+    //     resultImage = toImage(resultFileName2, res.data.result.data);
+    //     // predictStatus.value = "success";
+    //   } else {
+    //     resultFileName2 = "";
+    //     ElMessage.error(res.data.result.msg);
+    //   }
+    // };
+
+    // const oEMapErrorHandle = (err) => {
+    //   ElMessage.error("网络错误！");
+    // };
+
+    // // 目标检测处理
+    // const oDMapSuccessHandle = (res) => {
+    //   if (res.data.success) {
+    //     ElMessage.success("目标检测预测成功！");
+    //     resultFileName2 = res.data.result.fileName;
+    //   } else {
+    //     resultFileName2 = "";
+    //     ElMessage.error(res.data.result.msg);
+    //   }
+    // };
+
+    // const oDMapErrorHandle = (err) => {
+    //   ElMessage.error("网络错误！");
+    // };
+
+    // // 地物分类处理
+    // const tCMapSuccessHandle = (res) => {
+    //   if (res.data.success) {
+    //     ElMessage.success("目标检测预测成功！");
+    //     resultFileName2 = res.data.result.fileName;
+    //   } else {
+    //     resultFileName2 = "";
+    //     ElMessage.error(res.data.result.msg);
+    //   }
+    // };
+
+    // const tCMapErrorHandle = (err) => {
+    //   ElMessage.error("网络错误！");
+    // };
 
     return {
       modules: [Mousewheel, Pagination],
@@ -582,6 +676,14 @@ export default {
       backToSecond,
       activeTool,
       mapPredict,
+      finishMapPredict,
+      changeOpacity,
+      imageLayerVisible,
+      imageLayerOpacity,
+      changeImageLayerVisible,
+      formatTooltip,
+      changeImageLayerOpacity,
+      claerMapData,
     };
   },
 };
@@ -1162,13 +1264,53 @@ export default {
             @click="mapPredict('tc')"
             ><ElemeFilled
           /></el-icon>
-          <el-icon color="#292a2bbd" :size="40" @click="mapPredict()"
+          <el-popover
+            placement="right"
+            :width="200"
+            trigger="click"
+            :disabled="!finishMapPredict"
+          >
+            <template #reference>
+              <el-icon
+                color="#b0b2b4ad"
+                :size="40"
+                class="change-opacity"
+                :class="{
+                  disable: !finishMapPredict,
+                  active: finishMapPredict && activeTool == 5,
+                }"
+                @click="changeOpacity"
+                ><Tools
+              /></el-icon>
+            </template>
+            <template #default>
+              <div class="change-opacity-context">
+                <div class="change-visible">
+                  <span>显示结果</span>
+                  <el-switch
+                    inline-prompt
+                    v-model="imageLayerVisible"
+                    active-text="是"
+                    inactive-text="否"
+                    @change="changeImageLayerVisible"
+                  />
+                </div>
+                <div class="change-opacity-div">
+                  <span>透明度</span>
+                  <div class="opacity-slider">
+                    <el-slider v-model="imageLayerOpacity" :disabled="!imageLayerVisible" @change="changeImageLayerOpacity" :format-tooltip="formatTooltip"/>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </el-popover>
+          <el-icon color="#292a2bbd" :size="40" @click="claerMapData()"
             ><Lollipop
           /></el-icon>
         </div>
         <!-- <div id="testDiv" @click="Test"></div> -->
         <div id="mapDiv"></div>
-        <canvas id="ttttttt"></canvas>
+        <!-- <img id="ttttttt" /> -->
       </div>
     </swiper-slide>
   </swiper>
@@ -1471,7 +1613,7 @@ body {
 
 .map-content .toolbox {
   display: flex;
-  height: 250px;
+  height: 300px;
   width: 50px;
   position: absolute;
   top: 5%;
@@ -1494,12 +1636,50 @@ body {
   cursor: not-allowed;
 }
 
-.toolbox > .el-icon {
+.toolbox .el-icon {
   margin: 5px;
 }
 
-.toolbox > .el-icon.active {
+.toolbox .el-icon.active {
+  color: #409efc !important;
+}
+
+.toolbox .change-opacity.el-icon {
+  color: #292a2bbd;
+}
+
+.toolbox .change-opacity.el-icon:hover {
   color: #409efc;
+}
+
+.toolbox .change-opacity.disable.el-icon {
+  color: #b0b2b4ad;
+  cursor: not-allowed;
+}
+
+.toolbox .change-opacity.disable.el-icon:hover {
+  color: #b0b2b4ad;
+  cursor: not-allowed;
+}
+
+.change-opacity-context {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.change-opacity-context span {
+  margin: 10px;
+}
+
+.change-opacity-context .change-opacity-div {
+  display: flex;
+  flex-direction: column;
+}
+
+.change-opacity-context .change-opacity-div .opacity-slider {
+  margin: 0 15px;
 }
 
 .map-content > #testDiv {
