@@ -18,11 +18,7 @@ import {
   Document,
   Setting,
   Plus,
-  ArrowUp,
   DArrowLeft,
-  ElemeFilled,
-  Lollipop,
-  Tools,
 } from "@element-plus/icons-vue";
 
 import { Map, View } from "ol";
@@ -47,11 +43,7 @@ export default {
     Document,
     Setting,
     Plus,
-    ArrowUp,
     DArrowLeft,
-    ElemeFilled,
-    Lollipop,
-    Tools,
   },
   setup() {
     const baseUrl = "http://106.13.199.229:8887";
@@ -65,6 +57,8 @@ export default {
     let firstSlideSwiperIndex = 0;
 
     let secondSlideSwiperIndex = 0;
+
+    let activeIndex = ref("1");
 
     let activeStep = ref(0);
 
@@ -159,6 +153,12 @@ export default {
       firstSlideSwiperRef.slideTo(key - 1, 500);
       firstSlideSwiperIndex = key - 1;
     };
+
+    const changeSwiper = (key, keyPath) => {
+      mainSlideSwiperRef.slideTo(1, 500);
+      activeIndex.value = (firstSlideSwiperIndex + 1).toString();
+      secondSlideSwiperRef.slideTo(firstSlideSwiperIndex, 500);
+    }
 
     const handleSelect = (key, keyPath) => {
       secondSlideSwiperRef.slideTo(key - 1, 500);
@@ -349,6 +349,12 @@ export default {
       a.click();
     };
 
+    const goToThird = () => {
+      // clearData();
+      mainSlideSwiperRef.mousewheel.disable();
+      mainSlideSwiperRef.slideTo(2, 500);
+    };
+
     const clearData = () => {
       imageUrl.value = "";
       imgName.value = "";
@@ -385,7 +391,7 @@ export default {
         view: new View({
           // 地图视图
           projection: "EPSG:4326", // 坐标系，有EPSG:4326和EPSG:3857
-          center: [114.064839, 22.548857], // 深圳坐标
+          center: [114.327031,30.510229], // 深圳坐标
           maxZoom: 18,
           minZoom: 15, // 地图缩放最小级别
           zoom: 15, // 地图缩放级别（打开页面时默认级别）
@@ -572,19 +578,19 @@ export default {
     // 修改图片是否可见
     const changeImageLayerVisible = (val) => {
       imageLayer.setVisible(val);
-    }
+    };
 
     const formatTooltip = (val) => {
-      return val / 100
-    }
+      return val / 100;
+    };
 
     // 修改图片透明度
     const changeImageLayerOpacity = (val) => {
       imageLayer.setOpacity(val / 100);
-    }
+    };
 
     const claerMapData = () => {
-      if (imageLayer != null){
+      if (imageLayer != null) {
         hMap.removeLayer(imageLayer);
       }
       imageLayer = null;
@@ -593,60 +599,17 @@ export default {
       }
       mapDrawer = null;
       geometry = null;
-      mapAction = '';
+      mapAction = "";
       vectorSource.clear();
       imageLayerVisible.value = true;
       imageLayerOpacity.value = 100;
       activeTool.value = 0;
       finishMapPredict.value = false;
-    }
+    };
 
-    // // 目标提取处理
-    // const oEMapSuccessHandle = (res) => {
-    //   if (res.data.success) {
-    //     ElMessage.success("目标提取预测成功！");
-    //     resultFileName2 = res.data.result.fileName;
-    //     resultImage = toImage(resultFileName2, res.data.result.data);
-    //     // predictStatus.value = "success";
-    //   } else {
-    //     resultFileName2 = "";
-    //     ElMessage.error(res.data.result.msg);
-    //   }
-    // };
-
-    // const oEMapErrorHandle = (err) => {
-    //   ElMessage.error("网络错误！");
-    // };
-
-    // // 目标检测处理
-    // const oDMapSuccessHandle = (res) => {
-    //   if (res.data.success) {
-    //     ElMessage.success("目标检测预测成功！");
-    //     resultFileName2 = res.data.result.fileName;
-    //   } else {
-    //     resultFileName2 = "";
-    //     ElMessage.error(res.data.result.msg);
-    //   }
-    // };
-
-    // const oDMapErrorHandle = (err) => {
-    //   ElMessage.error("网络错误！");
-    // };
-
-    // // 地物分类处理
-    // const tCMapSuccessHandle = (res) => {
-    //   if (res.data.success) {
-    //     ElMessage.success("目标检测预测成功！");
-    //     resultFileName2 = res.data.result.fileName;
-    //   } else {
-    //     resultFileName2 = "";
-    //     ElMessage.error(res.data.result.msg);
-    //   }
-    // };
-
-    // const tCMapErrorHandle = (err) => {
-    //   ElMessage.error("网络错误！");
-    // };
+    const toHelp = () => {
+      window.open("http://www.cnsoftbei.com");
+    };
 
     return {
       modules: [Mousewheel, Pagination],
@@ -654,7 +617,9 @@ export default {
       setMainSlideSwiperRef,
       setFirstSlideSwiperRef,
       setSecondSlideSwiperRef,
+      changeSwiper,
       handleSelect,
+      activeIndex,
       activeStep,
       uploadUrl,
       handleAvatarSuccess,
@@ -671,6 +636,7 @@ export default {
       resultImageUrl,
       backToFirst,
       downloadResult,
+      goToThird,
       mainMap,
       loadMap,
       backToSecond,
@@ -684,6 +650,7 @@ export default {
       formatTooltip,
       changeImageLayerOpacity,
       claerMapData,
+      toHelp,
     };
   },
 };
@@ -710,12 +677,12 @@ export default {
         <el-menu
           mode="horizontal"
           @open="handleOpen"
+          @click="changeSwiper"
           :ellipsis="false"
           :unique-opened="true"
         >
           <el-sub-menu index="1">
             <template #title>目标提取</template>
-            <!-- <el-menu-item index="1-1">目标提取</el-menu-item> -->
           </el-sub-menu>
           <el-sub-menu index="2">
             <template #title>变化检测</template>
@@ -730,6 +697,55 @@ export default {
             <!-- <el-menu-item index="4-1">地物分类</el-menu-item> -->
           </el-sub-menu>
         </el-menu>
+        <el-menu
+          class="member-help-menu"
+          mode="horizontal"
+          :ellipsis="false"
+          :unique-opened="true"
+        >
+          <el-sub-menu index="5" popper-class="member-help">
+            <template #title
+              ><el-icon class="member"><i></i></el-icon>
+              <span>团队成员</span></template
+            >
+            <el-menu-item index="5-1">
+              <el-avatar
+                :size="70"
+                src="/src/assets/icons/xu.jpg"
+                style="margin: 7%"
+              />
+              <span class="member-name">续兴</span>
+            </el-menu-item>
+            <el-menu-item index="5-2">
+              <el-avatar
+                :size="70"
+                src="/src/assets/icons/feng.jpg"
+                style="margin: 7%"
+              />
+              <span class="member-name">冯湛芸</span>
+            </el-menu-item>
+            <el-menu-item index="5-3">
+              <el-avatar
+                :size="70"
+                src="/src/assets/icons/he.jpg"
+                style="margin: 7%"
+              />
+              <span class="member-name">何宇嘉</span>
+            </el-menu-item>
+            <el-menu-item index="5-4">
+              <el-avatar
+                :size="70"
+                src="/src/assets/icons/chen.jpg"
+                style="margin: 7%"
+              />
+              <span class="member-name">陈佳乐</span>
+            </el-menu-item>
+          </el-sub-menu>
+          <el-menu-item index="6" @click="toHelp"
+            ><el-icon class="help"><i></i></el-icon>
+            <span>帮助</span></el-menu-item
+          >
+        </el-menu>
       </div>
 
       <swiper
@@ -738,53 +754,43 @@ export default {
         @swiper="setFirstSlideSwiperRef"
       >
         <swiper-slide>
-          <div
-            class="swiper-slide-background"
-            :style="{
-              'background-image':
-                'url(https://swiperjs.com/demos/images/nature-1.jpg)',
-            }"
-          >
-            <p>
-              目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取
-            </p>
+          <div class="swiper-slide-background oe">
+            <div class="system-description">
+              <h1>XX系统</h1>
+              <p>
+                目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取
+              </p>
+            </div>
           </div>
         </swiper-slide>
         <swiper-slide>
-          <div
-            class="swiper-slide-background"
-            :style="{
-              'background-image':
-                'url(https://swiperjs.com/demos/images/nature-2.jpg)',
-            }"
-          >
-            <p>
-              变化检测变化检测变化检测变化检测变化检测变化检测变化检测变化检测
-            </p>
+          <div class="swiper-slide-background cd">
+            <div class="system-description">
+              <h1>XX系统</h1>
+              <p>
+                目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取
+              </p>
+            </div>
           </div>
         </swiper-slide>
         <swiper-slide>
-          <div
-            class="swiper-slide-background"
-            :style="{
-              'background-image':
-                'url(https://swiperjs.com/demos/images/nature-3.jpg)',
-            }"
-          >
-            <p>目标检测目标检测目标检测目标检测目标检测目标检测</p>
+          <div class="swiper-slide-background od">
+            <div class="system-description">
+              <h1>XX系统</h1>
+              <p>
+                目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取
+              </p>
+            </div>
           </div>
         </swiper-slide>
         <swiper-slide>
-          <div
-            class="swiper-slide-background"
-            :style="{
-              'background-image':
-                'url(https://swiperjs.com/demos/images/nature-4.jpg)',
-            }"
-          >
-            <p>
-              地物分类地物分类地物分类地物分类地物分类地物分类地物分类地物分类
-            </p>
+          <div class="swiper-slide-background tc">
+            <div class="system-description">
+              <h1>XX系统</h1>
+              <p>
+                目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取
+              </p>
+            </div>
           </div>
         </swiper-slide>
       </swiper>
@@ -794,7 +800,7 @@ export default {
     <swiper-slide class="second-swiper">
       <div class="swiper-second-menu">
         <el-menu
-          default-active="1"
+          :default-active="activeIndex"
           class="el-menu-vertical"
           :collapse="true"
           @select="handleSelect"
@@ -1231,6 +1237,13 @@ export default {
           </div>
         </swiper-slide>
       </swiper>
+      <el-icon
+        class="next-slide"
+        color="#dce5eebd"
+        :size="50"
+        @click="goToThird"
+        ><DArrowLeft
+      /></el-icon>
     </swiper-slide>
 
     <!-- 地图截图swiper -->
@@ -1243,27 +1256,31 @@ export default {
           <el-icon
             color="#292a2bbd"
             :size="40"
+            class="map-oe"
             :class="{ active: activeTool == 1 }"
             @click="mapPredict('oe')"
-            ><ElemeFilled
-          /></el-icon>
-          <el-icon color="#b0b2b4ad" :size="40" class="map-cd"
-            ><ElemeFilled
-          /></el-icon>
+            title="目标提取"
+            ><i></i
+          ></el-icon>
+          <el-icon color="#b0b2b4ad" :size="40" class="map-cd" title="变化检测"><i></i></el-icon>
           <el-icon
             color="#292a2bbd"
             :size="40"
+            class="map-od"
             :class="{ active: activeTool == 3 }"
             @click="mapPredict('od')"
-            ><ElemeFilled
-          /></el-icon>
+            title="目标检测"
+            ><i></i
+          ></el-icon>
           <el-icon
             color="#292a2bbd"
             :size="40"
+            class="map-tc"
             :class="{ active: activeTool == 4 }"
             @click="mapPredict('tc')"
-            ><ElemeFilled
-          /></el-icon>
+            title="地物分类"
+            ><i></i
+          ></el-icon>
           <el-popover
             placement="right"
             :width="200"
@@ -1280,8 +1297,9 @@ export default {
                   active: finishMapPredict && activeTool == 5,
                 }"
                 @click="changeOpacity"
-                ><Tools
-              /></el-icon>
+                title="调整图层可见性"
+                ><i></i
+              ></el-icon>
             </template>
             <template #default>
               <div class="change-opacity-context">
@@ -1298,15 +1316,25 @@ export default {
                 <div class="change-opacity-div">
                   <span>透明度</span>
                   <div class="opacity-slider">
-                    <el-slider v-model="imageLayerOpacity" :disabled="!imageLayerVisible" @change="changeImageLayerOpacity" :format-tooltip="formatTooltip"/>
+                    <el-slider
+                      v-model="imageLayerOpacity"
+                      :disabled="!imageLayerVisible"
+                      @change="changeImageLayerOpacity"
+                      :format-tooltip="formatTooltip"
+                    />
                   </div>
                 </div>
               </div>
             </template>
           </el-popover>
-          <el-icon color="#292a2bbd" :size="40" @click="claerMapData()"
-            ><Lollipop
-          /></el-icon>
+          <el-icon
+            color="#292a2bbd"
+            :size="40"
+            @click="claerMapData()"
+            class="map-clear"
+            title="清除"
+            ><i></i
+          ></el-icon>
         </div>
         <!-- <div id="testDiv" @click="Test"></div> -->
         <div id="mapDiv"></div>
@@ -1381,7 +1409,7 @@ body {
   z-index: 999;
   display: flex;
   width: 100%;
-  justify-content: center;
+  justify-content: space-between;
   background: #ffffffd9;
 }
 
@@ -1397,20 +1425,109 @@ body {
   display: none;
 }
 
+.member-help.el-popper.is-pure.is-light {
+  display: unset;
+  height: 40%;
+  width: 12%;
+}
+
+.member-help .member-help {
+  width: 100%;
+  height: 100%;
+}
+
+.member-help .member-help > ul {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: unset;
+  width: 100%;
+  height: 100%;
+}
+
+.member-help .member-help > ul > li {
+  width: 100%;
+  height: 22% !important;
+}
+
+.member-help .member-help > ul > li .member-name {
+  margin-left: 10%;
+  font-size: 20px;
+}
+
+.member-help-menu .el-icon i {
+  height: 26px;
+  width: 26px;
+}
+
+.member-help-menu .member.el-icon i {
+  background-image: url("./assets/icons/member.png");
+}
+
+.member-help-menu .el-sub-menu:hover .member.el-icon i {
+  background-image: url("./assets/icons/member_active.png");
+}
+
+.member-help-menu .help.el-icon i {
+  background-image: url("./assets/icons/help.png");
+}
+
+.member-help-menu .el-menu-item:hover .help.el-icon i {
+  background-image: url("./assets/icons/help_active.png");
+}
+
 .swiper-slide-background {
   height: 100%;
   width: 100%;
 }
 
-.swiper-slide-background > p {
-  top: 10%;
-  left: 5%;
+.swiper-slide-background > .system-description {
+  display: flex;
+  flex-direction: column;
+  top: 20%;
   position: absolute;
+  width: 100%;
+  font-size: 41px;
+  font-weight: 300;
+  font-family: Microsoft YaHei;
+}
+
+.swiper-slide-background > p {
   max-width: 40%;
   font-size: 41px;
   font-weight: 300;
   text-align: start;
   background: #ffffff30;
+}
+
+.swiper-slide-background.oe {
+  background-image: url("./assets/images/oebackground.jpg");
+  background-size: 100% 100%;
+}
+
+.swiper-slide-background.cd {
+  background-image: url("./assets/images/cdbackground.jpg");
+  background-size: 100% 100%;
+}
+
+.swiper-slide-background.od {
+  background-image: url("./assets/images/odbackground.jpg");
+  background-size: 100% 100%;
+}
+
+.swiper-slide-background.tc {
+  background-image: url("./assets/images/tcbackground.jpg");
+  background-size: 100% 100%;
+}
+
+.mySwiper .second-swiper {
+  background-image: url("./assets/images/secondswiper.jpg");
+  background-size: 100% 100%;
+  background-color: #ffffff00;
+}
+
+.mySwiper .second-swiper .swiper-slide {
+  background-color: #ffffff00;
 }
 
 .mySwiper .second-swiper .swiper-second-menu {
@@ -1422,11 +1539,11 @@ body {
   height: 100%;
   /* width: 100%; */
   align-items: center;
-  background: #ffffffd9;
 }
 
 .mySwiper .second-swiper .swiper-second-menu > ul {
-  background: none;
+  background-color: #ffffff70;
+  border-right: unset;
 }
 
 .second-swiper-content {
@@ -1441,6 +1558,11 @@ body {
 
 .second-swiper-content .step-header {
   height: 5%;
+  background-color: #ffffff70;
+}
+
+.second-swiper-content .step-header .el-steps--simple {
+  background-color: #ffffff70;
 }
 
 .second-swiper-content .steps-content {
@@ -1459,7 +1581,7 @@ body {
 .content-img {
   width: 100%;
   height: 92%;
-  background-color: #fafafa;
+  background-color: #ffffff00;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1486,7 +1608,7 @@ body {
 }
 
 .avatar-uploader .el-upload {
-  border: 1px dashed var(--el-border-color);
+  border: 2px dashed #ffffff;
   border-radius: 6px;
   cursor: pointer;
   position: relative;
@@ -1566,6 +1688,24 @@ body {
   max-height: 83%;
 }
 
+.second-swiper > .el-icon {
+  position: absolute;
+  bottom: 1%;
+  right: 50%;
+  transform: rotate(-90deg);
+  z-index: 99;
+}
+
+.second-swiper > .el-icon:hover {
+  /* color: #409efc; */
+  transform: translate(0, -5%) scale(1.2) rotate(-90deg);
+  transition: 0.2s;
+}
+
+.second-swiper .el-icon:hover {
+  color: #409efc;
+}
+
 .map-content {
   width: 100%;
   height: 100%;
@@ -1640,26 +1780,67 @@ body {
   margin: 5px;
 }
 
-.toolbox .el-icon.active {
-  color: #409efc !important;
+.toolbox .el-icon i {
+  height: 40px;
+  width: 40px;
 }
 
-.toolbox .change-opacity.el-icon {
-  color: #292a2bbd;
+.toolbox .map-oe.el-icon i {
+  background-image: url("./assets/icons/daolu.png");
 }
 
-.toolbox .change-opacity.el-icon:hover {
-  color: #409efc;
+.toolbox .map-oe.el-icon:hover i {
+  background-image: url("./assets/icons/daolu_active.png");
 }
 
-.toolbox .change-opacity.disable.el-icon {
-  color: #b0b2b4ad;
+.toolbox .map-oe.el-icon.active i {
+  background-image: url("./assets/icons/daolu_active.png");
+}
+
+.toolbox .map-cd.el-icon i {
+  background-image: url("./assets/icons/bianhuajiance_disabled.png");
   cursor: not-allowed;
 }
 
-.toolbox .change-opacity.disable.el-icon:hover {
-  color: #b0b2b4ad;
+.toolbox .map-od.el-icon i {
+  background-image: url("./assets/icons/mubiaojianceleixing.png");
+}
+
+.toolbox .map-od.el-icon:hover i {
+  background-image: url("./assets/icons/mubiaojianceleixing_active.png");
+}
+
+.toolbox .map-od.el-icon.active i {
+  background-image: url("./assets/icons/mubiaojianceleixing_active.png");
+}
+
+.toolbox .map-tc.el-icon i {
+  background-image: url("./assets/icons/zirandiwu.png");
+}
+
+.toolbox .map-tc.el-icon:hover i {
+  background-image: url("./assets/icons/zirandiwu_active.png");
+}
+
+.toolbox .map-tc.el-icon.active i {
+  background-image: url("./assets/icons/zirandiwu_active.png");
+}
+
+.toolbox .change-opacity.el-icon i {
+  background-image: url("./assets/icons/duibi.png");
   cursor: not-allowed;
+}
+
+.toolbox .change-opacity.el-icon:hover i {
+  background-image: url("./assets/icons/duibi_active.png");
+}
+
+.toolbox .change-opacity.el-icon.active i {
+  background-image: url("./assets/icons/duibi_active.png");
+}
+
+.toolbox .change-opacity.el-icon.disable i {
+  background-image: url("./assets/icons/duibi_disabled.png");
 }
 
 .change-opacity-context {
@@ -1682,20 +1863,11 @@ body {
   margin: 0 15px;
 }
 
-.map-content > #testDiv {
-  height: 65%;
-  width: 50%;
-  position: absolute;
-  z-index: 999;
-  top: 20%;
-  left: 20%;
-  border: 2px solid #409efc;
+.toolbox .map-clear.el-icon i {
+  background-image: url("./assets/icons/clear.png");
 }
 
-#ttttttt {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border: 3px solid #0b4be0;
+.toolbox .map-clear.el-icon:hover i {
+  background-image: url("./assets/icons/clear_active.png");
 }
 </style>
