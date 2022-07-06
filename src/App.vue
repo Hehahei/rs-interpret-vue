@@ -158,7 +158,42 @@ export default {
       mainSlideSwiperRef.slideTo(1, 500);
       activeIndex.value = (firstSlideSwiperIndex + 1).toString();
       secondSlideSwiperRef.slideTo(firstSlideSwiperIndex, 500);
-    }
+    };
+
+    const goTopage = (index) => {
+      switch (index) {
+        case "5-0":
+          window.open(
+            "https://aistudio.baidu.com/aistudio/competition/detail/151/0/my-team"
+          );
+          break;
+        case "5-1":
+          window.open(
+            "https://aistudio.baidu.com/aistudio/personalcenter/thirdview/253065"
+          );
+          break;
+        case "5-2":
+          window.open(
+            "https://aistudio.baidu.com/aistudio/personalcenter/thirdview/878234"
+          );
+          break;
+        case "5-3":
+          window.open(
+            "https://aistudio.baidu.com/aistudio/personalcenter/thirdview/404733"
+          );
+          break;
+        case "5-4":
+          window.open(
+            "https://aistudio.baidu.com/aistudio/personalcenter/thirdview/1551819"
+          );
+          break;
+        case "6":
+          window.open("http://www.cnsoftbei.com");
+          break;
+        default:
+          break;
+      }
+    };
 
     const handleSelect = (key, keyPath) => {
       secondSlideSwiperRef.slideTo(key - 1, 500);
@@ -391,7 +426,7 @@ export default {
         view: new View({
           // 地图视图
           projection: "EPSG:4326", // 坐标系，有EPSG:4326和EPSG:3857
-          center: [114.327031,30.510229], // 深圳坐标
+          center: [114.327031, 30.510229], // 深圳坐标
           maxZoom: 18,
           minZoom: 15, // 地图缩放最小级别
           zoom: 15, // 地图缩放级别（打开页面时默认级别）
@@ -607,10 +642,6 @@ export default {
       finishMapPredict.value = false;
     };
 
-    const toHelp = () => {
-      window.open("http://www.cnsoftbei.com");
-    };
-
     return {
       modules: [Mousewheel, Pagination],
       handleOpen,
@@ -618,6 +649,7 @@ export default {
       setFirstSlideSwiperRef,
       setSecondSlideSwiperRef,
       changeSwiper,
+      goTopage,
       handleSelect,
       activeIndex,
       activeStep,
@@ -650,7 +682,6 @@ export default {
       formatTooltip,
       changeImageLayerOpacity,
       claerMapData,
-      toHelp,
     };
   },
 };
@@ -702,12 +733,16 @@ export default {
           mode="horizontal"
           :ellipsis="false"
           :unique-opened="true"
+          @select="goTopage"
         >
           <el-sub-menu index="5" popper-class="member-help">
             <template #title
               ><el-icon class="member"><i></i></el-icon>
               <span>团队成员</span></template
             >
+            <el-menu-item index="5-0" class="team-name">
+              <span class="member-name">摸鱼达人</span>
+            </el-menu-item>
             <el-menu-item index="5-1">
               <el-avatar
                 :size="70"
@@ -741,7 +776,7 @@ export default {
               <span class="member-name">陈佳乐</span>
             </el-menu-item>
           </el-sub-menu>
-          <el-menu-item index="6" @click="toHelp"
+          <el-menu-item index="6"
             ><el-icon class="help"><i></i></el-icon>
             <span>帮助</span></el-menu-item
           >
@@ -756,9 +791,11 @@ export default {
         <swiper-slide>
           <div class="swiper-slide-background oe">
             <div class="system-description">
-              <h1>XX系统</h1>
+              <h1>基于PaddleRS的遥感智能解译平台</h1>
+              <h2>目标提取</h2>
               <p>
-                目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取
+                第十一届 “中国软件杯”百度遥感赛项：目标提取功能
+                对遥感影像中道路进行提取
               </p>
             </div>
           </div>
@@ -766,9 +803,11 @@ export default {
         <swiper-slide>
           <div class="swiper-slide-background cd">
             <div class="system-description">
-              <h1>XX系统</h1>
+              <h1>基于PaddleRS的遥感智能解译平台</h1>
+              <h2>变化检测</h2>
               <p>
-                目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取
+                第十一届 “中国软件杯”百度遥感赛项：变化检测功能
+                对两个时相的影像中的建筑变化进行检测
               </p>
             </div>
           </div>
@@ -776,9 +815,11 @@ export default {
         <swiper-slide>
           <div class="swiper-slide-background od">
             <div class="system-description">
-              <h1>XX系统</h1>
+              <h1>基于PaddleRS的遥感智能解译平台</h1>
+              <h2>目标检测</h2>
               <p>
-                目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取
+                第十一届 “中国软件杯”百度遥感赛项：目标检测功能
+                对遥感影像上的“操场”进行检测
               </p>
             </div>
           </div>
@@ -786,9 +827,11 @@ export default {
         <swiper-slide>
           <div class="swiper-slide-background tc">
             <div class="system-description">
-              <h1>XX系统</h1>
+              <h1>基于PaddleRS的遥感智能解译平台</h1>
+              <h2>地物分类</h2>
               <p>
-                目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取目标提取
+                第十一届 “中国软件杯”百度遥感赛项：地物分类功能
+                将影像中的地物分成4个类别
               </p>
             </div>
           </div>
@@ -1262,7 +1305,9 @@ export default {
             title="目标提取"
             ><i></i
           ></el-icon>
-          <el-icon color="#b0b2b4ad" :size="40" class="map-cd" title="变化检测"><i></i></el-icon>
+          <el-icon color="#b0b2b4ad" :size="40" class="map-cd" title="变化检测"
+            ><i></i
+          ></el-icon>
           <el-icon
             color="#292a2bbd"
             :size="40"
@@ -1450,6 +1495,10 @@ body {
   height: 22% !important;
 }
 
+.member-help .team-name {
+  justify-content: center;
+}
+
 .member-help .member-help > ul > li .member-name {
   margin-left: 10%;
   font-size: 20px;
@@ -1490,6 +1539,7 @@ body {
   font-size: 41px;
   font-weight: 300;
   font-family: Microsoft YaHei;
+  color: #fff;
 }
 
 .swiper-slide-background > p {
