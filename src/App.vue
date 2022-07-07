@@ -748,7 +748,7 @@ export default {
             <el-menu-item index="5-1">
               <el-avatar
                 :size="70"
-                src="/src/assets/icons/xu.jpg"
+                src="avater/xu.jpg"
                 style="margin: 7%"
               />
               <span class="member-name">续兴</span>
@@ -756,7 +756,7 @@ export default {
             <el-menu-item index="5-2">
               <el-avatar
                 :size="70"
-                src="/src/assets/icons/feng.jpg"
+                src="avater/feng.jpg"
                 style="margin: 7%"
               />
               <span class="member-name">冯湛芸</span>
@@ -764,7 +764,7 @@ export default {
             <el-menu-item index="5-3">
               <el-avatar
                 :size="70"
-                src="/src/assets/icons/he.jpg"
+                src="avater/he.jpg"
                 style="margin: 7%"
               />
               <span class="member-name">何宇嘉</span>
@@ -772,7 +772,7 @@ export default {
             <el-menu-item index="5-4">
               <el-avatar
                 :size="70"
-                src="/src/assets/icons/chen.jpg"
+                src="avater/chen.jpg"
                 style="margin: 7%"
               />
               <span class="member-name">陈佳乐</span>
