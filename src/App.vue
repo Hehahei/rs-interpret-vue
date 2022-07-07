@@ -46,7 +46,7 @@ export default {
     DArrowLeft,
   },
   setup() {
-    const baseUrl = "http://106.13.199.229:8887";
+    const baseUrl = "http://127.0.0.1:8887";
     let mainSlideSwiperRef = null;
     let firstSlideSwiperRef = null;
     let secondSlideSwiperRef = null;
@@ -262,11 +262,13 @@ export default {
           param.fileName = imgName.value;
           successHandle = oDSuccessHandle;
           errorHandle = oDErrorHandle;
+          break;
         case "tc":
           url = baseUrl + "/classify/predict";
           param.fileName = imgName.value;
           successHandle = tCSuccessHandle;
           errorHandle = tCErrorHandle;
+          break;
         default:
           break;
       }
@@ -1878,7 +1880,6 @@ body {
 
 .toolbox .change-opacity.el-icon i {
   background-image: url("./assets/icons/duibi.png");
-  cursor: not-allowed;
 }
 
 .toolbox .change-opacity.el-icon:hover i {
@@ -1891,6 +1892,7 @@ body {
 
 .toolbox .change-opacity.el-icon.disable i {
   background-image: url("./assets/icons/duibi_disabled.png");
+  cursor: not-allowed;
 }
 
 .change-opacity-context {
