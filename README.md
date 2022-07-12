@@ -35,7 +35,7 @@ npm install
 
 ### 5.2 开发版启动
 
-执行一下命令，启动开发项目，本地浏览器访问http://http://localhost:port
+执行一下命令，启动开发项目，本地浏览器访问http://localhost:port
 
 ```sh
 # 到文件夹目录下

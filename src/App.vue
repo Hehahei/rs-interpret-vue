@@ -29,7 +29,7 @@ import {
   Image as ImageLayer,
 } from "ol/layer";
 import { OverviewMap } from "ol/control";
-import { XYZ, Vector as VectorSource, ImageStatic } from "ol/source";
+import { XYZ, Vector as VectorSource, ImageStatic, ImageWMS } from "ol/source";
 import Draw, { createBox } from "ol/interaction/Draw";
 import { getTopLeft, getWidth, getHeight } from "ol/extent";
 import { Circle, Fill, Stroke, Style } from "ol/style";
@@ -122,6 +122,25 @@ export default {
       }),
     });
     tDTLayer.on("postrender", getContext);
+
+    const whCommunityWMSSource = new ImageWMS({
+      ratio: 1,
+      url: "http://124.223.198.115:8890/geoserver/wuhan/wms",
+      crossOrigin: "Anonymous",
+      serverType: "geoserver",
+      params: {
+        FORMAT: "image/png",
+        VERSION: "1.1.1",
+        STYLES: "",
+        LAYERS: "wuhan:wuhancommunity",
+        exceptions: "application/vnd.ogc.se_inimage",
+      },
+    });
+
+    const whLayer = new ImageLayer({
+      source: whCommunityWMSSource,
+      visible: true,
+    });
 
     let mapDrawer;
 
@@ -423,7 +442,7 @@ export default {
       });
       hMap = new Map({
         target: "mapDiv",
-        layers: [tDTLayer, vectorLayer],
+        layers: [tDTLayer, vectorLayer, whLayer],
         // layers: [tDTLayer],
         view: new View({
           // 地图视图
@@ -644,6 +663,35 @@ export default {
       finishMapPredict.value = false;
     };
 
+    // 查询
+    setTimeout(() => {
+      hMap.on("singleclick", (evt) => {
+        let viewResolution = hMap.getView().getResolution();
+        let url = whCommunityWMSSource.getFeatureInfoUrl(
+          evt.coordinate,
+          viewResolution,
+          "EPSG:4326",
+          { INFO_FORMAT: "application/json" }
+        );
+        axios({
+          // headers: { "Content-Type": "application/json" },
+          url: url,
+          method: "get",
+          // data: JSON.stringify({ imageData: newCanvas.toDataURL("image/jpeg") }),
+        }).then((res) => {
+          console.log(res);
+          if (res.status == 200) {
+            let features = res.data.features;
+            if (features.length == 0) {
+              return;
+            }
+            let attributes = features[0].properties;
+            console.log(attributes);
+          }
+        });
+      });
+    }, 3000);
+
     return {
       modules: [Mousewheel, Pagination],
       handleOpen,
@@ -746,35 +794,19 @@ export default {
               <span class="member-name">摸鱼达人</span>
             </el-menu-item>
             <el-menu-item index="5-1">
-              <el-avatar
-                :size="70"
-                src="avater/xu.jpg"
-                style="margin: 7%"
-              />
+              <el-avatar :size="70" src="avater/xu.jpg" style="margin: 7%" />
               <span class="member-name">续兴</span>
             </el-menu-item>
             <el-menu-item index="5-2">
-              <el-avatar
-                :size="70"
-                src="avater/feng.jpg"
-                style="margin: 7%"
-              />
+              <el-avatar :size="70" src="avater/feng.jpg" style="margin: 7%" />
               <span class="member-name">冯湛芸</span>
             </el-menu-item>
             <el-menu-item index="5-3">
-              <el-avatar
-                :size="70"
-                src="avater/he.jpg"
-                style="margin: 7%"
-              />
+              <el-avatar :size="70" src="avater/he.jpg" style="margin: 7%" />
               <span class="member-name">何宇嘉</span>
             </el-menu-item>
             <el-menu-item index="5-4">
-              <el-avatar
-                :size="70"
-                src="avater/chen.jpg"
-                style="margin: 7%"
-              />
+              <el-avatar :size="70" src="avater/chen.jpg" style="margin: 7%" />
               <span class="member-name">陈佳乐</span>
             </el-menu-item>
           </el-sub-menu>
