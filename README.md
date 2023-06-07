@@ -96,3 +96,8 @@ server {
 ```sh
 nginx
 ```
+## 贡献者
+
+<a href="https://github.com/Hehahei/rs-interpret-vue/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=Hehahei/rs-interpret-vue" />
+</a>
